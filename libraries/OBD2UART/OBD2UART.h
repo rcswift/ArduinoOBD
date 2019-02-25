@@ -10,18 +10,6 @@
 #define OBD_TIMEOUT_SHORT 1000 /* ms */
 #define OBD_TIMEOUT_LONG 10000 /* ms */
 
-#ifndef OBDUART
-#if defined(__AVR_ATmega328P__) || defined(__AVR_ATmega168P__)
-#define OBDUART Serial
-#else
-#define OBDUART Serial1
-#endif
-#endif
-
-#ifdef ESP32
-extern HardwareSerial Serial1;
-#endif
-
 // Mode 1 PIDs
 #define PID_ENGINE_LOAD 0x04
 #define PID_COOLANT_TEMP 0x05
@@ -107,8 +95,10 @@ uint8_t hex2uint8(const char *p);
 class COBD
 {
 public:
+	// Use a specified hardware serial object
+	COBD(HardwareSerial* hwSerial);
 	// begin serial UART
-	virtual byte begin();
+	virtual void begin();
 	// terminate communication channel
 	virtual void end();
 	// initialize OBD-II connection
@@ -173,5 +163,6 @@ private:
 	void recover();
 	virtual void idleTasks() {}
 	bool m_fusion = false;
+	HardwareSerial* obdSerial;
 };
 

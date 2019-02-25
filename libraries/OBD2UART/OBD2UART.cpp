@@ -56,6 +56,11 @@ byte hex2uint8(const char *p)
 * OBD-II UART Adapter
 *************************************************************************/
 
+COBD::COBD(HardwareSerial *hwSerial)
+{
+	obdSerial = hwSerial;
+}
+
 byte COBD::sendCommand(const char* cmd, char* buf, byte bufsize, int timeout)
 {
 	write(cmd);
@@ -131,7 +136,7 @@ void COBD::write(const char* s)
 	DEBUG.print("<<<");
 	DEBUG.println(s);
 #endif
-	OBDUART.write(s);
+	obdSerial->write(s);
 }
 
 int COBD::normalizeData(byte pid, char* data)
@@ -327,21 +332,9 @@ bool COBD::isValidPID(byte pid)
 	return (pidmap[i] & b) != 0;
 }
 
-byte COBD::begin()
+void COBD::begin()
 {
-	long baudrates[] = {115200, 38400};
-	byte version = 0;
-	for (byte n = 0; n < sizeof(baudrates) / sizeof(baudrates[0]); n++) {
-#ifndef ESP32
-		OBDUART.begin(baudrates[n]);
-#else
-		OBDUART.begin(baudrates[n], SERIAL_8N1, 16, 17);
-#endif
-		version = getVersion();
-		if (version != 0) break;
-		OBDUART.end();		 
-	}
-	return version;	
+	obdSerial->begin(115200);
 }
 
 byte COBD::getVersion()
@@ -367,8 +360,8 @@ int COBD::receive(char* buffer, int bufsize, unsigned int timeout)
 	unsigned long startTime = millis();
 	char c = 0;
 	for (;;) {
-		if (OBDUART.available()) {
-			c = OBDUART.read();
+		if (obdSerial->available()) {
+			c = obdSerial->read();
 			if (!buffer) {
 			       n++;
 			} else if (n < bufsize - 1) {
@@ -490,17 +483,17 @@ bool COBD::init(OBD_PROTOCOLS protocol)
 void COBD::end()
 {
 	m_state = OBD_DISCONNECTED;
-	OBDUART.end();
+	obdSerial->end();
 }
 
 bool COBD::setBaudRate(unsigned long baudrate)
 {
-    OBDUART.print("ATBR1 ");
-    OBDUART.print(baudrate);
-    OBDUART.print('\r');
+    obdSerial->print("ATBR1 ");
+    obdSerial->print(baudrate);
+    obdSerial->print('\r');
     delay(50);
-    OBDUART.end();
-    OBDUART.begin(baudrate);
+    obdSerial->end();
+    obdSerial->begin(baudrate);
     recover();
     return true;
 }
